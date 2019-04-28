@@ -128,15 +128,16 @@ class BasePolicy(ABC):
 
     @property
     def is_discrete(self):
+        """bool: is action space discrete."""
         return isinstance(self.ac_space, Discrete)
 
     @property
     def initial_state(self):
         """
-        The initial state of the policy. For stateless policies, None. For a stateful policy,
+        The initial state of the policy. For feedforward policies, None. For a recurrent policy,
         a NumPy array of shape (self.n_env, ) + state_shape.
         """
-        assert not self.recurrent
+        assert not self.recurrent, "When using recurrent policies, you must overwrite `initial_state()` method"
         return None
 
     @property
@@ -244,7 +245,7 @@ class ActorCriticPolicy(BasePolicy):
                                      for categorical in self.proba_distribution.categoricals]
             else:
                 self._policy_proba = []  # it will return nothing, as it is not implemented
-            self._value_tensor = self.value_fn[:, 0]
+            self._value_flat = self.value_fn[:, 0]
 
     @property
     def pdtype(self):
@@ -269,7 +270,7 @@ class ActorCriticPolicy(BasePolicy):
     @property
     def value_flat(self):
         """tf.Tensor: value estimate, of shape (self.n_batch, )"""
-        return self._value_tensor
+        return self._value_flat
 
     @property
     def action(self):
@@ -283,7 +284,7 @@ class ActorCriticPolicy(BasePolicy):
 
     @property
     def neglogp(self):
-        """tf.Tensor: negative log probability of the action sampled by self.action."""
+        """tf.Tensor: negative log likelihood of the action sampled by self.action."""
         return self._neglogp
 
     @property
@@ -319,7 +320,9 @@ class ActorCriticPolicy(BasePolicy):
 
 class RecurrentActorCriticPolicy(ActorCriticPolicy):
     """
-    Actor critic policy object that is stateful.
+    Actor critic policy object uses a previous state in the computation for the current step.
+    NOTE: this class is not limited to recurrent neural network policies,
+    see https://github.com/hill-a/stable-baselines/issues/241
 
     :param sess: (TensorFlow session) The current TensorFlow session
     :param ob_space: (Gym Space) The observation space of the environment
