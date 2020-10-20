@@ -57,7 +57,7 @@ class SubprocVecEnv(VecEnv):
         self.nremotes = nenvs // in_series
         env_fns = np.array_split(env_fns, self.nremotes)
         ctx = mp.get_context(context)
-        self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(self.nremotes)])
+        self.work_remotes, self.remotes = zip(*[ctx.Pipe() for _ in range(self.nremotes)])
         self.ps = [ctx.Process(target=worker, args=(work_remote, remote, CloudpickleWrapper(env_fn)))
                    for (work_remote, remote, env_fn) in zip(self.work_remotes, self.remotes, env_fns)]
         for p in self.ps:
